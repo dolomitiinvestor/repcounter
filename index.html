@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Reps — training log</title>
+<meta name="description" content="A private, offline training log. Reps, weight, and every session kept on your phone.">
+
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#14161a">
+
+<!-- iOS home screen -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Reps">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<link rel="icon" href="./icons/icon-192.png" sizes="192x192">
+
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+<header>
+  <div class="daybar" id="daybar">
+    <h1 id="dayTitle">—</h1>
+    <button class="nav-btn" id="prevDay" aria-label="Previous day">‹</button>
+    <button class="nav-btn" id="nextDay" aria-label="Next day">›</button>
+  </div>
+  <div class="daystat" id="dayStat"></div>
+</header>
+
+<main id="view"></main>
+
+<nav class="tabs">
+  <button data-tab="log" aria-selected="true">Log</button>
+  <button data-tab="history" aria-selected="false">History</button>
+  <button data-tab="data" aria-selected="false">Data</button>
+</nav>
+
+<div id="modal"></div>
+<datalist id="exlist"></datalist>
+
+<script src="./app.js"></script>
+</body>
+</html>

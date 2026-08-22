@@ -49,7 +49,7 @@ To test on your phone while developing, use your machine's LAN IP (`http://192.1
 **After you change any file, bump the cache version in `sw.js`:**
 
 ```js
-const CACHE = "reps-v2";   // was v1
+const CACHE = "reps-v3";   // was v2
 ```
 
 Skip this and installed phones keep serving the old copy indefinitely.
@@ -82,6 +82,10 @@ The shape is plain and easy to script against:
 ```json
 {
   "units": "lb",
+  "lastType": "push",
+  "dayTypes": {
+    "2026-08-19": "push"
+  },
   "days": {
     "2026-08-19": [
       {
@@ -103,12 +107,12 @@ The shape is plain and easy to script against:
 
 ## Using it
 
-- **Log** — `‹ ›` steps between days. **Add exercise** → pick a workout type (Push, Pull, Legs, Mix/Other, Cardio) → type a name (it autocompletes from everything you've logged) — or tap one of the quick-add chips, which only show exercises you've previously logged under that type → set reps and weight with the ± buttons → **Log set**. Repeat for each set, then save.
+- **Log** — `‹ ›` steps between days. Each day is one **session**, tagged with a workout type (Push, Pull, Legs, Mix/Other, Cardio) via the chips at the top of the Log page — pick it once and every exercise you add that day belongs to it. **Add exercise** → type a name (it autocompletes from everything you've logged) — or tap one of the quick-add chips, which only show exercises you've previously logged under that session's type → set reps and weight with the ± buttons → **Log set**. Repeat for each set, then save. Each logged exercise shows its volume and estimated 1RM for that session right on the card.
 - **Recall** — naming an exercise prefills the numbers from last time and shows that session below the field. Each set you log gets a delta against it: `+5 lb`, `+2 reps`, `same`.
-- **History** — every exercise you've ever done, with heaviest set, estimated 1RM, a top-set trend line, and each past session by date. Filter the list by workout type with the chips at the top.
+- **History** — every exercise you've ever done, with heaviest set, best-ever estimated 1RM, a top-set trend line, and every past session by date — each with its own estimated 1RM. Filter the list by workout type with the chips at the top.
 - **Data** — lb/kg, backups, and a full wipe.
 
-Estimated 1RM uses Epley: `weight × (1 + reps ÷ 30)`.
+Estimated 1RM uses Epley: `weight × (1 + reps ÷ 30)`, computed off the heaviest set in a session.
 
 ---
 

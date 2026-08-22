@@ -53,6 +53,7 @@ var db = { units:"lb", days:{} };
 var tab = "log";
 var cursor = todayKey();
 var openExercise = null;   // history detail
+var historyType = "all";  // history type filter
 
 /* ---------------- date utils ---------------- */
 function todayKey(){
@@ -110,11 +111,36 @@ function exerciseNames(){
   });
   return out;
 }
+var TYPES = [
+  {key:"push", label:"Push"},
+  {key:"pull", label:"Pull"},
+  {key:"legs", label:"Legs"},
+  {key:"mix", label:"Mix/Other"},
+  {key:"cardio", label:"Cardio"}
+];
+function typeLabel(key){
+  for(var i=0;i<TYPES.length;i++) if(TYPES[i].key===key) return TYPES[i].label;
+  return "Mix/Other";
+}
+function typeColor(key){
+  return { push:"#2D7DD2", pull:"#E0A500", legs:"#CE2B2B", cardio:"#2E9E8F", mix:"#8b9099" }[key] || "#8b9099";
+}
+function exerciseNamesByType(type){
+  var seen={}, out=[];
+  sortedDays().reverse().forEach(function(k){
+    db.days[k].forEach(function(e){
+      if((e.type||"mix")!==type) return;
+      var key=e.name.toLowerCase();
+      if(!seen[key]){ seen[key]=1; out.push(e.name); }
+    });
+  });
+  return out;
+}
 function sessionsOf(name){
   var lc=name.toLowerCase(), out=[];
   sortedDays().forEach(function(k){
     db.days[k].forEach(function(e){
-      if(e.name.toLowerCase()===lc) out.push({date:k, sets:e.sets});
+      if(e.name.toLowerCase()===lc) out.push({date:k, sets:e.sets, type:e.type||"mix"});
     });
   });
   return out;                       // ascending
@@ -126,7 +152,7 @@ function lastSessionBefore(name, dateKey, excludeId){
     db.days[k].forEach(function(e){
       if(e.name.toLowerCase()!==lc) return;
       if(k===dateKey && e.id===excludeId) return;
-      best={date:k, sets:e.sets};
+      best={date:k, sets:e.sets, type:e.type||"mix"};
     });
   });
   return best;
@@ -190,6 +216,7 @@ function renderLog(){
     var pr = bestEver(e.name, cursor, e.id);
     html += '<section class="sheet" data-id="'+e.id+'">';
     html += '<div class="sheet-head"><h2>'+esc(e.name)+'</h2>'+
+            '<span class="tbadge" style="color:'+typeColor(e.type||"mix")+'">'+esc(typeLabel(e.type||"mix"))+'</span>'+
             '<span class="vol">'+num(entryVolume(e))+' '+db.units+'</span>'+
             '<button class="kebab" data-edit="'+e.id+'" aria-label="Edit '+esc(e.name)+'">⋯</button></div>';
     e.sets.forEach(function(s,i){
@@ -218,10 +245,22 @@ function renderLog(){
 function renderHistory(){
   var names = exerciseNames();
   var q = (window.__q||"").toLowerCase();
-  var html = '<div class="search"><input type="text" id="q" placeholder="Search exercises" value="'+esc(window.__q||"")+'"></div>';
-  var shown = names.filter(function(n){ return n.toLowerCase().indexOf(q)>=0; });
+  var html = '<div class="chips" style="margin-bottom:12px">'+
+    '<button class="chip" data-htype="all"'+(historyType==="all"?' style="border-color:var(--plate-blue);color:var(--bone)"':'')+'>All</button>'+
+    TYPES.map(function(t){
+      return '<button class="chip" data-htype="'+t.key+'"'+(historyType===t.key?' style="border-color:'+typeColor(t.key)+';color:var(--bone)"':'')+'>'+esc(t.label)+'</button>';
+    }).join("")+
+    '</div>';
+  html += '<div class="search"><input type="text" id="q" placeholder="Search exercises" value="'+esc(window.__q||"")+'"></div>';
+  var shown = names.filter(function(n){
+    if(n.toLowerCase().indexOf(q)<0) return false;
+    if(historyType==="all") return true;
+    return sessionsOf(n).some(function(s){ return s.type===historyType; });
+  });
   if(!names.length){
     html += '<div class="empty"><div class="big">No history yet</div><p>Log a session and it lands here, with every set kept by date.</p></div>';
+  } else if(!shown.length){
+    html += '<div class="empty"><div class="big">No matches</div><p>Nothing logged for this type yet.</p></div>';
   } else {
     shown.forEach(function(n){
       var ss = sessionsOf(n);
@@ -229,6 +268,7 @@ function renderHistory(){
       var best = 0;
       ss.forEach(function(s){ s.sets.forEach(function(x){ if(x.weight>best) best=x.weight; }); });
       html += '<button class="hrow" data-ex="'+esc(n)+'"><span class="nm">'+esc(n)+
+              '<span class="tbadge" style="color:'+typeColor(last.type)+';margin-left:8px">'+esc(typeLabel(last.type))+'</span>'+
               '<div class="sub">'+ss.length+' session'+(ss.length>1?"s":"")+' · last '+shortDate(last.date)+'</div></span>'+
               '<span class="best">'+trim(best)+'</span></button>';
     });
@@ -321,16 +361,16 @@ function openPanel(entryId){
   var existing = null;
   if(entryId) existing = dayEntries(cursor).filter(function(e){ return e.id===entryId; })[0];
   draft = existing
-    ? { id:existing.id, name:existing.name, sets:existing.sets.map(function(s){ return {reps:s.reps,weight:s.weight}; }),
+    ? { id:existing.id, name:existing.name, type:existing.type||"mix", sets:existing.sets.map(function(s){ return {reps:s.reps,weight:s.weight}; }),
         reps:existing.sets[existing.sets.length-1].reps, weight:existing.sets[existing.sets.length-1].weight, editing:true }
-    : { id:uid(), name:"", sets:[], reps:8, weight:(db.units==="lb"?95:40), editing:false };
+    : { id:uid(), name:"", type:(db.lastType||"push"), sets:[], reps:8, weight:(db.units==="lb"?95:40), editing:false };
   paintPanel();
 }
 function closePanel(){ draft=null; document.getElementById("modal").innerHTML=""; render(); }
 
 function paintPanel(){
   var prev = draft.name ? lastSessionBefore(draft.name, cursor, draft.id) : null;
-  var recents = exerciseNames().slice(0,8);
+  var recents = exerciseNamesByType(draft.type).slice(0,8);
   var step = db.units==="lb" ? 5 : 2.5;
 
   var h = '<div class="panel" role="dialog" aria-label="Log exercise"><div class="panel-head">'+
@@ -338,6 +378,11 @@ function paintPanel(){
     '<span class="t">'+(draft.editing?"Edit":"Add")+' exercise</span>'+
     (draft.editing?'<button class="ghostbtn" id="delEntry" style="color:var(--plate-red)">Delete</button>':'')+
     '</div><div class="panel-body">';
+
+  h += '<label class="fl">Workout type</label>'+
+       '<div class="chips" style="margin-bottom:16px">'+TYPES.map(function(t){
+         return '<button class="chip" data-type="'+t.key+'"'+(draft.type===t.key?' style="border-color:'+typeColor(t.key)+';color:var(--bone)"':'')+'>'+esc(t.label)+'</button>';
+       }).join("")+'</div>';
 
   h += '<label class="fl" for="exName">Exercise</label>'+
        '<input type="text" id="exName" list="exlist" autocapitalize="words" autocomplete="off" '+
@@ -420,6 +465,7 @@ document.addEventListener("click", function(ev){
   if(t.id==="backHist"){ openExercise=null; render(); return; }
 
   if(t.dataset.unit){ db.units=t.dataset.unit; save(); render(); return; }
+  if(t.dataset.htype){ historyType=t.dataset.htype; render(); return; }
 
   if(t.id==="exportBtn"){
     var blob = new Blob([JSON.stringify(db,null,2)],{type:"application/json"});
@@ -441,6 +487,7 @@ document.addEventListener("click", function(ev){
   /* panel */
   if(!draft) return;
   if(t.id==="cancelP"){ closePanel(); return; }
+  if(t.dataset.type){ readInputs(); draft.type=t.dataset.type; paintPanel(); return; }
   if(t.dataset.pick){ readInputs(); draft.name=t.dataset.pick; prefillFromLast(); paintPanel(); focusName(false); return; }
   if(t.dataset.adj){
     readInputs();
@@ -468,8 +515,9 @@ document.addEventListener("click", function(ev){
     var list = db.days[cursor] || (db.days[cursor]=[]);
     var idx = -1;
     list.forEach(function(e,i){ if(e.id===draft.id) idx=i; });
-    var rec = { id:draft.id, name:draft.name.trim(), sets:draft.sets };
+    var rec = { id:draft.id, name:draft.name.trim(), type:draft.type||"mix", sets:draft.sets };
     if(idx>=0) list[idx]=rec; else list.push(rec);
+    db.lastType = rec.type;
     save(); closePanel(); return;
   }
 });

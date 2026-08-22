@@ -70,6 +70,10 @@
   }
   .sheet-head .vol{font-family:var(--mono);font-size:11px;color:var(--ink-soft)}
   .kebab{padding:0 4px;color:var(--ink-soft);font-size:20px;line-height:.6}
+  .tbadge{
+    font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+    padding:2px 6px;border-radius:4px;border:1px solid currentColor;line-height:1.4;flex:none
+  }
 
   .setrow{
     display:flex;align-items:center;gap:10px;padding:7px 14px;

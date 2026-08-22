@@ -65,7 +65,7 @@ Skip this and installed phones keep serving the old copy indefinitely.
 | `styles.css` | All styling, design tokens at the top in `:root` |
 | `sw.js` | Offline cache |
 | `manifest.webmanifest` | Home-screen name, icons, standalone display |
-| `icons/` | 192, 512, maskable, and the iOS 180px touch icon |
+| `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png` | Generated from `rep-counter.png` — 192, 512, maskable, and the iOS 180px touch icon |
 
 ---
 

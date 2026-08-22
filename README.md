@@ -87,6 +87,7 @@ The shape is plain and easy to script against:
       {
         "id": "k3f9a2b",
         "name": "Bench press",
+        "type": "push",
         "sets": [
           { "reps": 8, "weight": 135 },
           { "reps": 8, "weight": 135 },
@@ -102,9 +103,9 @@ The shape is plain and easy to script against:
 
 ## Using it
 
-- **Log** — `‹ ›` steps between days. **Add exercise** → type a name (it autocompletes from everything you've logged) → set reps and weight with the ± buttons → **Log set**. Repeat for each set, then save.
+- **Log** — `‹ ›` steps between days. **Add exercise** → pick a workout type (Push, Pull, Legs, Mix/Other, Cardio) → type a name (it autocompletes from everything you've logged) — or tap one of the quick-add chips, which only show exercises you've previously logged under that type → set reps and weight with the ± buttons → **Log set**. Repeat for each set, then save.
 - **Recall** — naming an exercise prefills the numbers from last time and shows that session below the field. Each set you log gets a delta against it: `+5 lb`, `+2 reps`, `same`.
-- **History** — every exercise you've ever done, with heaviest set, estimated 1RM, a top-set trend line, and each past session by date.
+- **History** — every exercise you've ever done, with heaviest set, estimated 1RM, a top-set trend line, and each past session by date. Filter the list by workout type with the chips at the top.
 - **Data** — lb/kg, backups, and a full wipe.
 
 Estimated 1RM uses Epley: `weight × (1 + reps ÷ 30)`.

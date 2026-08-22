@@ -49,7 +49,7 @@ var store = {
   }
 };
 
-var db = { units:"lb", days:{} };
+var db = { units:"lb", days:{}, dayTypes:{} };
 var tab = "log";
 var cursor = todayKey();
 var openExercise = null;   // history detail
@@ -136,6 +136,8 @@ function exerciseNamesByType(type){
   });
   return out;
 }
+function sessionType(k){ return (db.dayTypes && db.dayTypes[k]) || null; }
+function setSessionType(k, type){ db.dayTypes = db.dayTypes || {}; db.dayTypes[k] = type; }
 function sessionsOf(name){
   var lc=name.toLowerCase(), out=[];
   sortedDays().forEach(function(k){
@@ -210,14 +212,17 @@ function renderLog(){
     ? "<b>"+list.length+"</b> exercise"+(list.length>1?"s":"")+" · <b>"+sets+"</b> sets · <b>"+num(dayVolume(cursor))+"</b> "+db.units+" moved"
     : shortDate(cursor)+" · nothing logged";
 
-  var html = "";
+  var curType = sessionType(cursor) || db.lastType || "push";
+  var html = '<div class="chips" style="margin:0 0 14px">'+TYPES.map(function(t){
+    return '<button class="chip" data-stype="'+t.key+'"'+(curType===t.key?' style="border-color:'+typeColor(t.key)+';color:var(--bone)"':'')+'>'+esc(t.label)+'</button>';
+  }).join("")+'</div>';
+
   list.forEach(function(e){
     var prev = lastSessionBefore(e.name, cursor, e.id);
     var pr = bestEver(e.name, cursor, e.id);
     html += '<section class="sheet" data-id="'+e.id+'">';
     html += '<div class="sheet-head"><h2>'+esc(e.name)+'</h2>'+
-            '<span class="tbadge" style="color:'+typeColor(e.type||"mix")+'">'+esc(typeLabel(e.type||"mix"))+'</span>'+
-            '<span class="vol">'+num(entryVolume(e))+' '+db.units+'</span>'+
+            '<span class="vol">'+num(entryVolume(e))+' '+db.units+' · 1RM '+trim(e1rm(topSet(e.sets)))+'</span>'+
             '<button class="kebab" data-edit="'+e.id+'" aria-label="Edit '+esc(e.name)+'">⋯</button></div>';
     e.sets.forEach(function(s,i){
       var isPR = pr>0 && s.weight>pr;
@@ -235,8 +240,8 @@ function renderLog(){
   });
 
   if(!list.length){
-    html = '<div class="empty"><div class="big">Empty page</div>'+
-           '<p>Add your first exercise of the day. Previous numbers show up as soon as you name it.</p></div>';
+    html += '<div class="empty"><div class="big">Empty page</div>'+
+           '<p>Pick today’s workout type above, then add your first exercise. Previous numbers show up as soon as you name it.</p></div>';
   }
   html += '<button class="add" id="addBtn">+ Add exercise</button>';
   view.innerHTML = html;
@@ -298,7 +303,8 @@ function renderExercise(){
 
   ss.slice().reverse().forEach(function(s){
     var v = s.sets.reduce(function(t,x){ return t+x.reps*x.weight; },0);
-    html += '<div class="session"><div class="d">'+shortDate(s.date)+' · '+num(v)+' '+db.units+'</div>'+
+    var rm = e1rm(topSet(s.sets));
+    html += '<div class="session"><div class="d">'+shortDate(s.date)+' · '+num(v)+' '+db.units+' · Est. 1RM '+trim(rm)+' '+db.units+'</div>'+
             '<div class="s">'+esc(summarise(s.sets))+'</div></div>';
   });
   dayTitle.textContent = "History";
@@ -360,10 +366,11 @@ var draft = null;   // {id, name, sets:[], reps, weight, editing}
 function openPanel(entryId){
   var existing = null;
   if(entryId) existing = dayEntries(cursor).filter(function(e){ return e.id===entryId; })[0];
+  var curType = sessionType(cursor) || db.lastType || "push";
   draft = existing
-    ? { id:existing.id, name:existing.name, type:existing.type||"mix", sets:existing.sets.map(function(s){ return {reps:s.reps,weight:s.weight}; }),
+    ? { id:existing.id, name:existing.name, type:existing.type||curType, sets:existing.sets.map(function(s){ return {reps:s.reps,weight:s.weight}; }),
         reps:existing.sets[existing.sets.length-1].reps, weight:existing.sets[existing.sets.length-1].weight, editing:true }
-    : { id:uid(), name:"", type:(db.lastType||"push"), sets:[], reps:8, weight:(db.units==="lb"?95:40), editing:false };
+    : { id:uid(), name:"", type:curType, sets:[], reps:8, weight:(db.units==="lb"?95:40), editing:false };
   paintPanel();
 }
 function closePanel(){ draft=null; document.getElementById("modal").innerHTML=""; render(); }
@@ -375,14 +382,9 @@ function paintPanel(){
 
   var h = '<div class="panel" role="dialog" aria-label="Log exercise"><div class="panel-head">'+
     '<button class="ghostbtn" id="cancelP">Cancel</button>'+
-    '<span class="t">'+(draft.editing?"Edit":"Add")+' exercise</span>'+
+    '<span class="t">'+(draft.editing?"Edit":"Add")+' '+esc(typeLabel(draft.type).toLowerCase())+' exercise</span>'+
     (draft.editing?'<button class="ghostbtn" id="delEntry" style="color:var(--plate-red)">Delete</button>':'')+
     '</div><div class="panel-body">';
-
-  h += '<label class="fl">Workout type</label>'+
-       '<div class="chips" style="margin-bottom:16px">'+TYPES.map(function(t){
-         return '<button class="chip" data-type="'+t.key+'"'+(draft.type===t.key?' style="border-color:'+typeColor(t.key)+';color:var(--bone)"':'')+'>'+esc(t.label)+'</button>';
-       }).join("")+'</div>';
 
   h += '<label class="fl" for="exName">Exercise</label>'+
        '<input type="text" id="exName" list="exlist" autocapitalize="words" autocomplete="off" '+
@@ -466,6 +468,7 @@ document.addEventListener("click", function(ev){
 
   if(t.dataset.unit){ db.units=t.dataset.unit; save(); render(); return; }
   if(t.dataset.htype){ historyType=t.dataset.htype; render(); return; }
+  if(t.dataset.stype){ setSessionType(cursor, t.dataset.stype); db.lastType=t.dataset.stype; save(); render(); return; }
 
   if(t.id==="exportBtn"){
     var blob = new Blob([JSON.stringify(db,null,2)],{type:"application/json"});
@@ -479,7 +482,7 @@ document.addEventListener("click", function(ev){
   if(t.id==="importBtn"){ document.getElementById("fileIn").click(); return; }
   if(t.id==="wipeBtn"){
     if(confirm("Delete every logged session? This cannot be undone.")){
-      db={units:db.units,days:{}}; save(); render();
+      db={units:db.units,days:{},dayTypes:{}}; save(); render();
     }
     return;
   }
@@ -487,7 +490,6 @@ document.addEventListener("click", function(ev){
   /* panel */
   if(!draft) return;
   if(t.id==="cancelP"){ closePanel(); return; }
-  if(t.dataset.type){ readInputs(); draft.type=t.dataset.type; paintPanel(); return; }
   if(t.dataset.pick){ readInputs(); draft.name=t.dataset.pick; prefillFromLast(); paintPanel(); focusName(false); return; }
   if(t.dataset.adj){
     readInputs();
@@ -517,6 +519,7 @@ document.addEventListener("click", function(ev){
     list.forEach(function(e,i){ if(e.id===draft.id) idx=i; });
     var rec = { id:draft.id, name:draft.name.trim(), type:draft.type||"mix", sets:draft.sets };
     if(idx>=0) list[idx]=rec; else list.push(rec);
+    setSessionType(cursor, rec.type);
     db.lastType = rec.type;
     save(); closePanel(); return;
   }
@@ -546,7 +549,7 @@ document.addEventListener("change", function(ev){
       try{
         var d=JSON.parse(fr.result);
         if(!d || typeof d.days!=="object") throw 0;
-        db={units:d.units||"lb", days:d.days};
+        db={units:d.units||"lb", days:d.days, dayTypes:d.dayTypes||{}, lastType:d.lastType};
         save(); render();
       }catch(e){ alert("That file isn't a Reps backup. Pick the .json you exported."); }
     };

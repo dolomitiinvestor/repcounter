@@ -398,15 +398,18 @@ function paintPanel(){
          '<div class="val">'+esc(summarise(prev.sets))+'</div></div>';
   }
 
+  var repsMax = Math.max(50, draft.reps+10);
+  var wMax = db.units==="lb"
+    ? Math.max(500, Math.ceil((draft.weight+50)/50)*50)
+    : Math.max(225, Math.ceil((draft.weight+25)/25)*25);
+
   h += '<div class="steppers">'+
-    '<div class="stepper"><div class="cap">Reps</div><div class="row">'+
-      '<button class="pm" data-adj="reps:-1" aria-label="Fewer reps">−</button>'+
-      '<input type="text" inputmode="numeric" id="repsIn" value="'+draft.reps+'">'+
-      '<button class="pm" data-adj="reps:1" aria-label="More reps">+</button></div></div>'+
-    '<div class="stepper"><div class="cap">Weight '+db.units+'</div><div class="row">'+
-      '<button class="pm" data-adj="weight:-'+step+'" aria-label="Less weight">−</button>'+
-      '<input type="text" inputmode="decimal" id="wIn" value="'+trim(draft.weight)+'">'+
-      '<button class="pm" data-adj="weight:'+step+'" aria-label="More weight">+</button></div></div></div>';
+    '<div class="stepper"><div class="cap">Reps</div>'+
+      '<div class="sliderval" id="repsVal">'+draft.reps+'</div>'+
+      '<input type="range" id="repsIn" min="1" max="'+repsMax+'" step="1" value="'+draft.reps+'" aria-label="Reps"></div>'+
+    '<div class="stepper"><div class="cap">Weight '+db.units+'</div>'+
+      '<div class="sliderval" id="wVal">'+trim(draft.weight)+'</div>'+
+      '<input type="range" id="wIn" min="0" max="'+wMax+'" step="'+step+'" value="'+draft.weight+'" aria-label="Weight"></div></div>';
 
   h += '<button class="primary" id="logSet" style="margin-top:14px">+ Log set</button>';
 
@@ -489,13 +492,6 @@ document.addEventListener("click", function(ev){
   if(t.id==="cancelP"){ closePanel(); return; }
   if(t.dataset.type){ readInputs(); draft.type=t.dataset.type; paintPanel(); return; }
   if(t.dataset.pick){ readInputs(); draft.name=t.dataset.pick; prefillFromLast(); paintPanel(); focusName(false); return; }
-  if(t.dataset.adj){
-    readInputs();
-    var p=t.dataset.adj.split(":"), amt=parseFloat(p[1]);
-    if(p[0]==="reps") draft.reps=Math.max(1, draft.reps+amt);
-    else draft.weight=Math.max(0, Math.round((draft.weight+amt)*100)/100);
-    paintPanel(); return;
-  }
   if(t.id==="logSet"){
     readInputs();
     if(!draft.name.trim()){ focusName(true); return; }
@@ -561,6 +557,16 @@ document.addEventListener("input", function(ev){
     [].forEach.call(document.querySelectorAll(".hrow"), function(r){
       r.classList.toggle("hide", r.dataset.ex.toLowerCase().indexOf(q) < 0);
     });
+  }
+  if(ev.target.id==="repsIn" && draft){
+    draft.reps = parseInt(ev.target.value,10)||1;
+    var rv = document.getElementById("repsVal");
+    if(rv) rv.textContent = draft.reps;
+  }
+  if(ev.target.id==="wIn" && draft){
+    draft.weight = parseFloat(ev.target.value)||0;
+    var wv = document.getElementById("wVal");
+    if(wv) wv.textContent = trim(draft.weight);
   }
 });
 

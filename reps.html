@@ -188,18 +188,18 @@
   .ghostlast .lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--plate-yellow)}
   .ghostlast .val{font-family:var(--cond);font-size:19px;letter-spacing:.02em;margin-top:3px;color:#cfcabc}
 
-  .steppers{display:flex;gap:10px;margin:18px 0 4px}
-  .stepper{flex:1;background:var(--floor-2);border-radius:14px;padding:11px 10px 13px;text-align:center}
+  .steppers{display:flex;flex-direction:column;gap:10px;margin:18px 0 4px}
+  .stepper{background:var(--floor-2);border-radius:14px;padding:13px 12px 15px;text-align:center}
   .stepper .cap{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--steel)}
-  .stepper .row{display:flex;align-items:center;gap:6px;margin-top:5px}
+  .stepper .row{display:flex;align-items:center;gap:10px;margin-top:6px}
   .stepper .pm{
-    width:40px;height:40px;border-radius:10px;background:#282d35;color:var(--bone);
-    font-size:21px;line-height:1;display:grid;place-items:center;flex:none
+    width:56px;height:56px;border-radius:13px;background:#282d35;color:var(--bone);
+    font-size:28px;line-height:1;display:grid;place-items:center;flex:none
   }
   .stepper .pm:active{background:var(--plate-blue)}
   .stepper input{
     flex:1;width:100%;min-width:0;background:none;border:0;text-align:center;
-    font-family:var(--cond);font-weight:700;font-size:33px;letter-spacing:.01em;padding:0
+    font-family:var(--cond);font-weight:700;font-size:44px;letter-spacing:.01em;padding:0
   }
 
   .queued{margin-top:20px}
@@ -208,11 +208,11 @@
     font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--steel);
     padding-bottom:8px;border-bottom:1px solid #262a31
   }
-  .qrow{display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid #1f2329}
-  .qrow .figure{color:var(--bone);font-size:22px}
+  .qrow{display:flex;align-items:center;gap:10px;padding:4px 2px;border-bottom:1px solid #1f2329}
+  .qrow .figure{color:var(--bone);font-size:18px;line-height:1}
   .qrow .figure .x,.qrow .figure .unit{color:var(--steel)}
   .qrow .setvol{color:var(--steel)}
-  .rm{width:30px;height:30px;border-radius:8px;background:#242830;color:#787e88;font-size:17px;display:grid;place-items:center;flex:none}
+  .rm{width:24px;height:24px;border-radius:7px;background:#242830;color:#787e88;font-size:14px;display:grid;place-items:center;flex:none}
 
   /* ---------- history ---------- */
   .search{margin-bottom:12px}

@@ -103,7 +103,7 @@ The shape is plain and easy to script against:
 
 ## Using it
 
-- **Log** — `‹ ›` steps between days. **Add exercise** → pick a workout type (Push, Pull, Legs, Mix/Other, Cardio) → type a name (it autocompletes from everything you've logged) — or tap one of the quick-add chips, which only show exercises you've previously logged under that type → drag the reps and weight sliders to dial in your numbers → **Log set**. Repeat for each set, then save.
+- **Log** — `‹ ›` steps between days. **Add exercise** → pick a workout type (Push, Pull, Legs, Mix/Other, Cardio) → type a name (it autocompletes from everything you've logged) — or tap one of the quick-add chips, which only show exercises you've previously logged under that type → set reps and weight with the ± buttons → **Log set**. Repeat for each set, then save. Tap the pencil on a logged set to edit it in place.
 - **Recall** — naming an exercise prefills the numbers from last time and shows that session below the field. Each set you log gets a delta against it: `+5 lb`, `+2 reps`, `same`.
 - **History** — every exercise you've ever done, with heaviest set, estimated 1RM, a top-set trend line, and each past session by date. Filter the list by workout type with the chips at the top.
 - **Data** — lb/kg, backups, and a full wipe.
@@ -114,8 +114,7 @@ Estimated 1RM uses Epley: `weight × (1 + reps ÷ 30)`.
 
 ## Things you might want to change
 
-- **Weight slider step size** — `app.js`, in `paintPanel()`: `var step = db.units==="lb" ? 5 : 2.5;`
-- **Slider ranges** — `app.js`, in `paintPanel()`: `repsMax` and `wMax`. Both grow automatically as the current value approaches the top.
+- **Weight increment on the ± buttons** — `app.js`, in `paintPanel()`: `var step = db.units==="lb" ? 5 : 2.5;`
 - **Colors and type** — `styles.css`, the `:root` block. The palette is IWF plate colors: blue is 20 kg, red is 25 kg, yellow is 15 kg.
 - **Default reps/weight for a brand-new exercise** — `app.js`, in `openPanel()`.
 

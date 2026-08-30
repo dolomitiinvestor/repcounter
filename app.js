@@ -362,8 +362,8 @@ function openPanel(entryId){
   if(entryId) existing = dayEntries(cursor).filter(function(e){ return e.id===entryId; })[0];
   draft = existing
     ? { id:existing.id, name:existing.name, type:existing.type||"mix", sets:existing.sets.map(function(s){ return {reps:s.reps,weight:s.weight}; }),
-        reps:existing.sets[existing.sets.length-1].reps, weight:existing.sets[existing.sets.length-1].weight, editing:true }
-    : { id:uid(), name:"", type:(db.lastType||"push"), sets:[], reps:8, weight:(db.units==="lb"?95:40), editing:false };
+        reps:existing.sets[existing.sets.length-1].reps, weight:existing.sets[existing.sets.length-1].weight, editing:true, editingSetIndex:null }
+    : { id:uid(), name:"", type:(db.lastType||"push"), sets:[], reps:8, weight:(db.units==="lb"?95:40), editing:false, editingSetIndex:null };
   paintPanel();
 }
 function closePanel(){ draft=null; document.getElementById("modal").innerHTML=""; render(); }
@@ -398,20 +398,24 @@ function paintPanel(){
          '<div class="val">'+esc(summarise(prev.sets))+'</div></div>';
   }
 
-  var repsMax = Math.max(50, draft.reps+10);
-  var wMax = db.units==="lb"
-    ? Math.max(500, Math.ceil((draft.weight+50)/50)*50)
-    : Math.max(225, Math.ceil((draft.weight+25)/25)*25);
+  if(draft.editingSetIndex!=null){
+    h += '<div style="margin-top:14px;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--plate-blue)">Editing set '+(draft.editingSetIndex+1)+'</div>';
+  }
 
   h += '<div class="steppers">'+
-    '<div class="stepper"><div class="cap">Reps</div>'+
-      '<div class="sliderval" id="repsVal">'+draft.reps+'</div>'+
-      '<input type="range" id="repsIn" min="1" max="'+repsMax+'" step="1" value="'+draft.reps+'" aria-label="Reps"></div>'+
-    '<div class="stepper"><div class="cap">Weight '+db.units+'</div>'+
-      '<div class="sliderval" id="wVal">'+trim(draft.weight)+'</div>'+
-      '<input type="range" id="wIn" min="0" max="'+wMax+'" step="'+step+'" value="'+draft.weight+'" aria-label="Weight"></div></div>';
+    '<div class="stepper"><div class="cap">Reps</div><div class="row">'+
+      '<button class="pm" data-adj="reps:-1" aria-label="Fewer reps">−</button>'+
+      '<input type="text" inputmode="numeric" id="repsIn" value="'+draft.reps+'">'+
+      '<button class="pm" data-adj="reps:1" aria-label="More reps">+</button></div></div>'+
+    '<div class="stepper"><div class="cap">Weight '+db.units+'</div><div class="row">'+
+      '<button class="pm" data-adj="weight:-'+step+'" aria-label="Less weight">−</button>'+
+      '<input type="text" inputmode="decimal" id="wIn" value="'+trim(draft.weight)+'">'+
+      '<button class="pm" data-adj="weight:'+step+'" aria-label="More weight">+</button></div></div></div>';
 
-  h += '<button class="primary" id="logSet" style="margin-top:14px">+ Log set</button>';
+  h += '<button class="primary" id="logSet" style="margin-top:14px">'+(draft.editingSetIndex!=null?"Update set":"+ Log set")+'</button>';
+  if(draft.editingSetIndex!=null){
+    h += '<button class="ghostbtn" id="cancelSetEdit" style="margin-top:8px;width:100%">Cancel edit</button>';
+  }
 
   h += '<div class="queued"><div class="qhead"><span>Sets this session</span><span>'+
        (draft.sets.length? num(draft.sets.reduce(function(t,s){return t+s.reps*s.weight;},0))+" "+db.units : "—")+'</span></div>';
@@ -426,9 +430,10 @@ function paintPanel(){
       else if(dr) d = '<span class="delta'+(dr<0?' down':'')+'">'+(dr>0?"+":"")+dr+' rep'+(Math.abs(dr)>1?"s":"")+'</span>';
       else d = '<span class="delta down">same</span>';
     }
-    h += '<div class="qrow"><span class="idx">'+(i+1)+'</span>'+
+    h += '<div class="qrow'+(draft.editingSetIndex===i?' editing':'')+'"><span class="idx">'+(i+1)+'</span>'+
          '<span class="figure">'+s.reps+'<span class="x">×</span>'+trim(s.weight)+'<span class="unit">'+db.units+'</span></span>'+
          d+'<span class="setvol">'+num(s.reps*s.weight)+'</span>'+
+         '<button class="edbtn" data-edset="'+i+'" aria-label="Edit set '+(i+1)+'">✎</button>'+
          '<button class="rm" data-rm="'+i+'" aria-label="Remove set '+(i+1)+'">×</button></div>';
   });
   h += '</div></div>';
@@ -492,14 +497,42 @@ document.addEventListener("click", function(ev){
   if(t.id==="cancelP"){ closePanel(); return; }
   if(t.dataset.type){ readInputs(); draft.type=t.dataset.type; paintPanel(); return; }
   if(t.dataset.pick){ readInputs(); draft.name=t.dataset.pick; prefillFromLast(); paintPanel(); focusName(false); return; }
+  if(t.dataset.adj){
+    readInputs();
+    var p=t.dataset.adj.split(":"), amt=parseFloat(p[1]);
+    if(p[0]==="reps") draft.reps=Math.max(1, draft.reps+amt);
+    else draft.weight=Math.max(0, Math.round((draft.weight+amt)*100)/100);
+    paintPanel(); return;
+  }
   if(t.id==="logSet"){
     readInputs();
     if(!draft.name.trim()){ focusName(true); return; }
-    draft.sets.push({reps:draft.reps, weight:draft.weight});
+    if(draft.editingSetIndex!=null){
+      draft.sets[draft.editingSetIndex] = {reps:draft.reps, weight:draft.weight};
+      draft.editingSetIndex = null;
+    } else {
+      draft.sets.push({reps:draft.reps, weight:draft.weight});
+    }
     paintPanel(); return;
   }
-  if(t.dataset.rm!==undefined && t.classList.contains("rm")){
-    readInputs(); draft.sets.splice(+t.dataset.rm,1); paintPanel(); return;
+  if(t.id==="cancelSetEdit"){
+    readInputs(); draft.editingSetIndex=null; paintPanel(); return;
+  }
+  if(t.dataset.edset!==undefined){
+    readInputs();
+    var ei = +t.dataset.edset;
+    draft.editingSetIndex = ei;
+    draft.reps = draft.sets[ei].reps;
+    draft.weight = draft.sets[ei].weight;
+    paintPanel(); return;
+  }
+  if(t.dataset.rm!==undefined){
+    readInputs();
+    var ri = +t.dataset.rm;
+    draft.sets.splice(ri,1);
+    if(draft.editingSetIndex===ri) draft.editingSetIndex=null;
+    else if(draft.editingSetIndex!=null && draft.editingSetIndex>ri) draft.editingSetIndex--;
+    paintPanel(); return;
   }
   if(t.id==="delEntry"){
     db.days[cursor] = dayEntries(cursor).filter(function(e){ return e.id!==draft.id; });
@@ -558,23 +591,20 @@ document.addEventListener("input", function(ev){
       r.classList.toggle("hide", r.dataset.ex.toLowerCase().indexOf(q) < 0);
     });
   }
-  if(ev.target.id==="repsIn" && draft){
-    draft.reps = parseInt(ev.target.value,10)||1;
-    var rv = document.getElementById("repsVal");
-    if(rv) rv.textContent = draft.reps;
-  }
-  if(ev.target.id==="wIn" && draft){
-    draft.weight = parseFloat(ev.target.value)||0;
-    var wv = document.getElementById("wVal");
-    if(wv) wv.textContent = trim(draft.weight);
-  }
 });
 
 document.addEventListener("keydown", function(ev){
   if(ev.key==="Enter" && draft){
     if(ev.target.id==="repsIn" || ev.target.id==="wIn"){
       ev.preventDefault(); ev.target.blur();
-      readInputs(); draft.sets.push({reps:draft.reps, weight:draft.weight}); paintPanel();
+      readInputs();
+      if(draft.editingSetIndex!=null){
+        draft.sets[draft.editingSetIndex] = {reps:draft.reps, weight:draft.weight};
+        draft.editingSetIndex = null;
+      } else {
+        draft.sets.push({reps:draft.reps, weight:draft.weight});
+      }
+      paintPanel();
     }
     if(ev.target.id==="exName"){ ev.preventDefault(); ev.target.blur(); }
   }

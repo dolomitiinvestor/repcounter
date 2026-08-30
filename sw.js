@@ -1,6 +1,6 @@
 /* Reps — offline cache.
    Bump CACHE when you change any file, or phones keep serving the old copy. */
-const CACHE = "reps-v4";
+const CACHE = "reps-v5";
 const ASSETS = [
   "./",
   "./index.html",

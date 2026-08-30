@@ -95,7 +95,22 @@ The shape is plain and easy to script against:
         ]
       }
     ]
-  }
+  },
+  "exerciseLib": {
+    "push": ["Bench press", "Overhead press"],
+    "pull": ["Pull-up"]
+  },
+  "plans": [
+    {
+      "id": "hrwg7bv",
+      "name": "Push Day A",
+      "items": [
+        { "name": "Bench press", "type": "push", "sets": 3 },
+        { "name": "Overhead press", "type": "push", "sets": 3 }
+      ]
+    }
+  ],
+  "runningPlanId": null
 }
 ```
 
@@ -103,10 +118,11 @@ The shape is plain and easy to script against:
 
 ## Using it
 
-- **Log** — `‹ ›` steps between days. **Add exercise** → pick a workout type (Push, Pull, Legs, Mix/Other, Cardio) → type a name (it autocompletes from everything you've logged) — or tap one of the quick-add chips, which only show exercises you've previously logged under that type → set reps and weight with the ± buttons → **Log set**. Repeat for each set, then save. Tap the pencil on a logged set to edit it in place.
+- **Log** — `‹ ›` steps between days. **Add exercise** → pick a workout type (Push, Pull, Legs, Mix/Other, Cardio) → type a name (it autocompletes from everything you've logged, plus anything in your exercise library) — or tap one of the quick-add chips, which show your library entries first and then anything you've previously logged under that type → set reps and weight with the ± buttons → **Log set**. Repeat for each set, then save. Tap the pencil on a logged set to edit it in place.
 - **Recall** — naming an exercise prefills the numbers from last time and shows that session below the field. Each set you log gets a delta against it: `+5 lb`, `+2 reps`, `same`.
-- **History** — every exercise you've ever done, with heaviest set, estimated 1RM, a top-set trend line, and each past session by date. Filter the list by workout type with the chips at the top.
-- **Data** — lb/kg, backups, and a full wipe.
+- **Plans** — **Manage exercise library** lets you build and edit a saved list of exercises per workout category (add, rename, delete), independent of what you've actually logged. **+ New plan** builds a plan from exercise × target-sets pairs, in any order. **Start** a plan and the Log tab shows a progress bar for each exercise (`2/3` sets); tap any item, in whatever order you like, to log a set for it — it reuses that day's entry if one already exists. **End** stops tracking progress without deleting anything you logged.
+- **History** — every exercise you've ever done, with heaviest set, estimated 1RM, a top-set trend line, a breakdown of your best rep count at every weight you've used (with a projected 1RM for each), and each past session by date. Filter the list by workout type with the chips at the top.
+- **Data** — lb/kg, backups, and a full wipe (which also clears your exercise library and plans).
 
 Estimated 1RM uses Epley: `weight × (1 + reps ÷ 30)`.
 

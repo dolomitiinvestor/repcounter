@@ -246,6 +246,47 @@
   .note b{color:var(--plate-yellow)}
   .toolrow{display:flex;gap:9px;margin-top:12px}
   .toolrow button{flex:1}
+
+  /* ---------- plans ---------- */
+  .planrow{
+    display:flex;align-items:center;gap:10px;padding:6px 6px 6px 14px;
+    background:var(--floor-2);border-radius:12px;margin-bottom:10px
+  }
+  .planrow.active{box-shadow:inset 0 0 0 1.5px var(--plate-blue)}
+  .planinfo{flex:1;text-align:left;padding:8px 0}
+  .planinfo .nm{font-family:var(--cond);font-size:18px;font-weight:600;letter-spacing:.03em;text-transform:uppercase}
+  .planinfo .sub{font-family:var(--mono);font-size:10.5px;color:var(--steel);margin-top:2px;letter-spacing:.02em}
+
+  .planbar{background:var(--floor-2);border-radius:var(--radius);padding:13px 14px;margin-bottom:14px}
+  .pbhead{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .pbhead .t{flex:1;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--plate-blue)}
+  .pitems{display:flex;flex-direction:column;gap:7px}
+  .pirow{display:flex;align-items:center;gap:9px;padding:10px 11px;background:var(--floor);border-radius:10px;text-align:left;width:100%}
+  .pirow .nm{flex:1;font-family:var(--cond);font-size:15.5px;letter-spacing:.02em}
+  .pirow .prog{font-family:var(--mono);font-size:11px;color:var(--steel)}
+  .pirow.done{opacity:.7}
+  .pirow.done .prog{color:#3ecf8e}
+
+  /* ---------- exercise library ---------- */
+  .librow{display:flex;align-items:center;gap:8px;padding:11px 2px;border-bottom:1px solid #1f2329}
+  .librow .nm{flex:1;font-size:15px}
+  .librow.editing{gap:8px}
+  .librow.editing input{
+    flex:1;background:var(--floor-2);border:1px solid #2d323a;border-radius:8px;
+    padding:9px 10px;font-size:14px
+  }
+  .addrow{display:flex;gap:8px}
+  .addrow input{flex:1}
+
+  /* ---------- history: weight breakdown ---------- */
+  .wtable{margin-bottom:20px}
+  .wtable .cap{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--steel);margin-bottom:8px}
+  .wrow{display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--floor-2);border-radius:10px;margin-bottom:6px}
+  .wrow .w{font-family:var(--cond);font-size:16px;font-weight:700;min-width:66px}
+  .wrow .r{flex:1;font-family:var(--mono);font-size:11px;color:var(--steel)}
+  .wrow .erm{font-family:var(--mono);font-size:11px;color:var(--steel)}
+  .wrow.best{box-shadow:inset 0 0 0 1px var(--plate-blue)}
+  .wrow.best .erm{color:var(--plate-blue)}
   @media(prefers-reduced-motion:no-preference){
     .panel{animation:up .22s cubic-bezier(.32,.72,0,1)}
     @keyframes up{from{transform:translateY(100%)}to{transform:translateY(0)}}
@@ -267,6 +308,7 @@
 
 <nav class="tabs">
   <button data-tab="log" aria-selected="true">Log</button>
+  <button data-tab="plans" aria-selected="false">Plans</button>
   <button data-tab="history" aria-selected="false">History</button>
   <button data-tab="data" aria-selected="false">Data</button>
 </nav>
@@ -293,11 +335,15 @@ var store = {
   }
 };
 
-var db = { units:"lb", days:{} };
+var db = { units:"lb", days:{}, exerciseLib:{}, plans:[], runningPlanId:null };
 var tab = "log";
 var cursor = todayKey();
 var openExercise = null;   // history detail
 var historyType = "all";  // history type filter
+var libType = "push";     // exercise-library panel filter
+var libEdit = null;       // name currently being renamed in library panel
+var planDraft = null;     // {id,name,items,editing} while the plan editor is open
+var piType = "push", piName = "", piSets = 3;  // plan-item builder fields
 
 /* ---------------- date utils ---------------- */
 function todayKey(){
@@ -380,6 +426,50 @@ function exerciseNamesByType(type){
   });
   return out;
 }
+function suggestNamesByType(type){
+  var seen={}, out=[];
+  (db.exerciseLib[type]||[]).forEach(function(n){
+    var k=n.toLowerCase(); if(!seen[k]){ seen[k]=1; out.push(n); }
+  });
+  exerciseNamesByType(type).forEach(function(n){
+    var k=n.toLowerCase(); if(!seen[k]){ seen[k]=1; out.push(n); }
+  });
+  return out;
+}
+function allLibNames(){
+  var seen={}, out=[];
+  TYPES.forEach(function(t){
+    (db.exerciseLib[t.key]||[]).forEach(function(n){
+      var k=n.toLowerCase(); if(!seen[k]){ seen[k]=1; out.push(n); }
+    });
+  });
+  return out;
+}
+function libAdd(type, name){
+  name = (name||"").trim(); if(!name) return;
+  db.exerciseLib[type] = db.exerciseLib[type] || [];
+  var lc = name.toLowerCase();
+  if(db.exerciseLib[type].some(function(n){ return n.toLowerCase()===lc; })) return;
+  db.exerciseLib[type].push(name);
+  save();
+}
+function libDelete(type, name){
+  db.exerciseLib[type] = (db.exerciseLib[type]||[]).filter(function(n){ return n!==name; });
+  save();
+}
+function libRename(type, oldName, newName){
+  newName = (newName||"").trim(); if(!newName) return;
+  db.exerciseLib[type] = db.exerciseLib[type] || [];
+  var arr = db.exerciseLib[type];
+  var idx = arr.indexOf(oldName);
+  if(idx<0) return;
+  arr[idx] = newName;
+  save();
+}
+function planById(id){
+  for(var i=0;i<db.plans.length;i++) if(db.plans[i].id===id) return db.plans[i];
+  return null;
+}
 function sessionsOf(name){
   var lc=name.toLowerCase(), out=[];
   sortedDays().forEach(function(k){
@@ -405,6 +495,17 @@ function topSet(sets){
   return sets.reduce(function(a,s){ return (!a || s.weight>a.weight || (s.weight===a.weight && s.reps>a.reps)) ? s : a; }, null);
 }
 function e1rm(s){ return s.weight * (1 + s.reps/30); }
+function weightBreakdown(ss){
+  // per weight used, the most reps ever done at that weight
+  var map = {};
+  ss.forEach(function(s){ s.sets.forEach(function(x){
+    var k = trim(x.weight);
+    if(!map[k] || x.reps>map[k].reps) map[k] = {weight:x.weight, reps:x.reps};
+  }); });
+  var arr = Object.keys(map).map(function(k){ return map[k]; });
+  arr.sort(function(a,b){ return b.weight-a.weight; });
+  return arr;
+}
 function bestEver(name, excludeDate, excludeId){
   var b=0;
   sessionsOf(name).forEach(function(s){
@@ -441,6 +542,7 @@ function render(){
   document.getElementById("nextDay").classList.toggle("hide", !isLog);
   dayStat.classList.toggle("hide", !isLog);
   if(isLog) renderLog();
+  else if(tab==="plans") renderPlans();
   else if(tab==="history") openExercise ? renderExercise() : renderHistory();
   else renderData();
   refreshDatalist();
@@ -455,6 +557,10 @@ function renderLog(){
     : shortDate(cursor)+" · nothing logged";
 
   var html = "";
+  var runPlan = db.runningPlanId ? planById(db.runningPlanId) : null;
+  if(db.runningPlanId && !runPlan){ db.runningPlanId=null; save(); }
+  if(runPlan) html += renderPlanBar(runPlan);
+
   list.forEach(function(e){
     var prev = lastSessionBefore(e.name, cursor, e.id);
     var pr = bestEver(e.name, cursor, e.id);
@@ -479,10 +585,47 @@ function renderLog(){
   });
 
   if(!list.length){
-    html = '<div class="empty"><div class="big">Empty page</div>'+
-           '<p>Add your first exercise of the day. Previous numbers show up as soon as you name it.</p></div>';
+    html += '<div class="empty"><div class="big">Empty page</div>'+
+            '<p>Add your first exercise of the day. Previous numbers show up as soon as you name it.</p></div>';
   }
   html += '<button class="add" id="addBtn">+ Add exercise</button>';
+  view.innerHTML = html;
+}
+
+function renderPlanBar(plan){
+  var h = '<div class="planbar"><div class="pbhead"><span class="t">Plan · '+esc(plan.name)+'</span>'+
+    '<button class="ghostbtn" data-endplan="1">End</button></div><div class="pitems">';
+  plan.items.forEach(function(item, i){
+    var entry = dayEntries(cursor).filter(function(e){ return e.name.toLowerCase()===item.name.toLowerCase(); })[0];
+    var done = entry ? entry.sets.length : 0;
+    var complete = done>=item.sets;
+    h += '<button class="pirow'+(complete?' done':'')+'" data-planitem="'+i+'">'+
+      '<span class="tbadge" style="color:'+typeColor(item.type)+'">'+esc(typeLabel(item.type))+'</span>'+
+      '<span class="nm">'+esc(item.name)+'</span>'+
+      '<span class="prog">'+done+'/'+item.sets+'</span></button>';
+  });
+  h += '</div></div>';
+  return h;
+}
+
+function renderPlans(){
+  dayTitle.textContent = "Plans";
+  var html = '<button class="ghostbtn" id="manageLib" style="margin-bottom:16px;width:100%">Manage exercise library</button>';
+  html += '<div class="qhead" style="margin:4px 0 10px;border-bottom:1px solid #262a31;padding-bottom:8px;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--steel)">Workout plans</div>';
+  if(!db.plans.length){
+    html += '<div class="empty"><div class="big">No plans yet</div>'+
+            '<p>Build a plan from exercises and target sets, then work through it in any order.</p></div>';
+  } else {
+    db.plans.forEach(function(p){
+      var totalSets = p.items.reduce(function(t,i){ return t+i.sets; },0);
+      var running = db.runningPlanId===p.id;
+      html += '<div class="planrow'+(running?' active':'')+'">'+
+        '<button class="planinfo" data-editplan="'+p.id+'"><span class="nm">'+esc(p.name)+'</span>'+
+        '<div class="sub">'+p.items.length+' exercise'+(p.items.length>1?"s":"")+' · '+totalSets+' sets'+(running?' · running':'')+'</div></button>'+
+        '<button class="ghostbtn" data-startplan="'+p.id+'">'+(running?"Resume":"Start")+'</button></div>';
+    });
+  }
+  html += '<button class="add" id="newPlan" style="margin-top:14px">+ New plan</button>';
   view.innerHTML = html;
 }
 
@@ -540,6 +683,19 @@ function renderExercise(){
 
   html += spark(ss);
 
+  var wb = weightBreakdown(ss);
+  if(wb.length){
+    html += '<div class="wtable"><div class="cap">By weight · max reps &amp; projected 1RM</div>';
+    wb.forEach(function(r){
+      var rm = e1rm({weight:r.weight, reps:r.reps});
+      var isBest = Math.abs(rm-bestRm)<0.05;
+      html += '<div class="wrow'+(isBest?' best':'')+'"><span class="w">'+trim(r.weight)+' '+db.units+'</span>'+
+              '<span class="r">'+r.reps+' rep'+(r.reps>1?'s':'')+' max</span>'+
+              '<span class="erm">'+trim(rm)+' e1RM</span></div>';
+    });
+    html += '</div>';
+  }
+
   ss.slice().reverse().forEach(function(s){
     var v = s.sets.reduce(function(t,x){ return t+x.reps*x.weight; },0);
     html += '<div class="session"><div class="d">'+shortDate(s.date)+' · '+num(v)+' '+db.units+'</div>'+
@@ -592,27 +748,33 @@ function renderData(){
 }
 
 function refreshDatalist(){
+  var seen={}, out=[];
+  exerciseNames().concat(allLibNames()).forEach(function(n){
+    var k=n.toLowerCase(); if(!seen[k]){ seen[k]=1; out.push(n); }
+  });
   document.getElementById("exlist").innerHTML =
-    exerciseNames().map(function(n){ return '<option value="'+esc(n)+'">'; }).join("");
+    out.map(function(n){ return '<option value="'+esc(n)+'">'; }).join("");
 }
 
 /* ---------------- entry panel ---------------- */
 var draft = null;   // {id, name, sets:[], reps, weight, editing}
 
-function openPanel(entryId){
+function openPanel(entryId, prefill){
   var existing = null;
   if(entryId) existing = dayEntries(cursor).filter(function(e){ return e.id===entryId; })[0];
   draft = existing
     ? { id:existing.id, name:existing.name, type:existing.type||"mix", sets:existing.sets.map(function(s){ return {reps:s.reps,weight:s.weight}; }),
         reps:existing.sets[existing.sets.length-1].reps, weight:existing.sets[existing.sets.length-1].weight, editing:true, editingSetIndex:null }
-    : { id:uid(), name:"", type:(db.lastType||"push"), sets:[], reps:8, weight:(db.units==="lb"?95:40), editing:false, editingSetIndex:null };
+    : { id:uid(), name:(prefill&&prefill.name)||"", type:(prefill&&prefill.type)||(db.lastType||"push"),
+        sets:[], reps:8, weight:(db.units==="lb"?95:40), editing:false, editingSetIndex:null };
+  if(prefill && !existing) prefillFromLast();
   paintPanel();
 }
 function closePanel(){ draft=null; document.getElementById("modal").innerHTML=""; render(); }
 
 function paintPanel(){
   var prev = draft.name ? lastSessionBefore(draft.name, cursor, draft.id) : null;
-  var recents = exerciseNamesByType(draft.type).slice(0,8);
+  var recents = suggestNamesByType(draft.type).slice(0,8);
   var step = db.units==="lb" ? 5 : 2.5;
 
   var h = '<div class="panel" role="dialog" aria-label="Log exercise"><div class="panel-head">'+
@@ -694,6 +856,108 @@ function readInputs(){
   if(n) draft.name = n.value;
 }
 
+/* ---------------- exercise library panel ---------------- */
+function openLibPanel(){ libType = db.lastType||"push"; libEdit=null; paintLibPanel(); }
+function closeLibPanel(){ document.getElementById("modal").innerHTML=""; render(); }
+
+function paintLibPanel(){
+  var items = (db.exerciseLib[libType]||[]).slice().sort(function(a,b){ return a.localeCompare(b); });
+
+  var h = '<div class="panel" role="dialog" aria-label="Exercise library"><div class="panel-head">'+
+    '<button class="ghostbtn" id="cancelLib">Done</button>'+
+    '<span class="t">Exercise library</span></div><div class="panel-body">';
+
+  h += '<div class="chips" style="margin-bottom:16px">'+TYPES.map(function(t){
+    return '<button class="chip" data-libtype="'+t.key+'"'+(libType===t.key?' style="border-color:'+typeColor(t.key)+';color:var(--bone)"':'')+'>'+esc(t.label)+'</button>';
+  }).join("")+'</div>';
+
+  if(!items.length){
+    h += '<div style="padding:10px 2px;color:#5b616b;font-size:13px">No exercises saved under '+esc(typeLabel(libType))+' yet.</div>';
+  }
+  items.forEach(function(n){
+    if(libEdit===n){
+      h += '<div class="librow editing"><input type="text" id="libEditIn" value="'+esc(n)+'">'+
+           '<button class="edbtn" id="libSave" aria-label="Save name">✓</button>'+
+           '<button class="rm" id="libCancelEdit" aria-label="Cancel rename">×</button></div>';
+    } else {
+      h += '<div class="librow"><span class="nm">'+esc(n)+'</span>'+
+           '<button class="edbtn" data-libren="'+esc(n)+'" aria-label="Rename '+esc(n)+'">✎</button>'+
+           '<button class="rm" data-libdel="'+esc(n)+'" aria-label="Delete '+esc(n)+'">×</button></div>';
+    }
+  });
+
+  h += '<div class="addrow" style="margin-top:14px">'+
+       '<input type="text" id="libNew" autocapitalize="words" autocomplete="off" placeholder="Add exercise to '+esc(typeLabel(libType))+'">'+
+       '<button class="ghostbtn" id="libAdd">Add</button></div>';
+  h += '</div></div>';
+
+  document.getElementById("modal").innerHTML = h;
+}
+
+/* ---------------- plan editor panel ---------------- */
+function openPlanPanel(planId){
+  var existing = planId ? planById(planId) : null;
+  planDraft = existing
+    ? { id:existing.id, name:existing.name, items:existing.items.map(function(it){ return {name:it.name,type:it.type,sets:it.sets}; }), editing:true }
+    : { id:uid(), name:"", items:[], editing:false };
+  piType = db.lastType||"push"; piName=""; piSets=3;
+  paintPlanPanel();
+}
+function closePlanPanel(){ planDraft=null; document.getElementById("modal").innerHTML=""; render(); }
+
+function paintPlanPanel(){
+  var h = '<div class="panel" role="dialog" aria-label="Workout plan"><div class="panel-head">'+
+    '<button class="ghostbtn" id="cancelPlanP">Cancel</button>'+
+    '<span class="t">'+(planDraft.editing?"Edit":"New")+' plan</span>'+
+    (planDraft.editing?'<button class="ghostbtn" id="delPlan" style="color:var(--plate-red)">Delete</button>':'')+
+    '</div><div class="panel-body">';
+
+  h += '<label class="fl" for="planName">Plan name</label>'+
+       '<input type="text" id="planName" autocapitalize="words" autocomplete="off" placeholder="Upper body A" value="'+esc(planDraft.name)+'">';
+
+  h += '<div class="queued" style="margin-top:20px"><div class="qhead"><span>Exercises in this plan</span><span>'+
+       (planDraft.items.length? planDraft.items.reduce(function(t,i){ return t+i.sets; },0)+" sets" : "—")+'</span></div>';
+  if(!planDraft.items.length){
+    h += '<div style="padding:18px 2px;color:#5b616b;font-size:13px">No exercises yet. Add one below.</div>';
+  }
+  planDraft.items.forEach(function(it,i){
+    h += '<div class="qrow"><span class="tbadge" style="color:'+typeColor(it.type)+'">'+esc(typeLabel(it.type))+'</span>'+
+         '<span class="figure" style="font-size:16px;flex:1">'+esc(it.name)+'</span>'+
+         '<span class="setvol">×'+it.sets+'</span>'+
+         '<button class="rm" data-rmitem="'+i+'" aria-label="Remove '+esc(it.name)+'">×</button></div>';
+  });
+  h += '</div>';
+
+  h += '<label class="fl" style="margin-top:20px">Add exercise</label>'+
+       '<div class="chips" style="margin-bottom:12px">'+TYPES.map(function(t){
+         return '<button class="chip" data-pitype="'+t.key+'"'+(piType===t.key?' style="border-color:'+typeColor(t.key)+';color:var(--bone)"':'')+'>'+esc(t.label)+'</button>';
+       }).join("")+'</div>';
+  h += '<input type="text" id="piName" list="exlist" autocapitalize="words" autocomplete="off" placeholder="Exercise name" value="'+esc(piName)+'">';
+  var sug = suggestNamesByType(piType).slice(0,8);
+  if(!piName && sug.length){
+    h += '<div class="chips">'+sug.map(function(n){ return '<button class="chip" data-pipick="'+esc(n)+'">'+esc(n)+'</button>'; }).join("")+'</div>';
+  }
+  h += '<div class="stepper" style="margin-top:12px"><div class="cap">Sets</div><div class="row">'+
+       '<button class="pm" data-piadj="-1" aria-label="Fewer sets">−</button>'+
+       '<input type="text" inputmode="numeric" id="piSetsIn" value="'+piSets+'">'+
+       '<button class="pm" data-piadj="1" aria-label="More sets">+</button></div></div>';
+  h += '<button class="primary" id="addItem" style="margin-top:14px">+ Add to plan</button>';
+
+  h += '</div><div class="panel-foot"><button class="primary" id="savePlan"'+
+       (planDraft.name.trim()&&planDraft.items.length?"":" disabled")+'>Save plan</button></div></div>';
+
+  document.getElementById("modal").innerHTML = h;
+}
+
+function readPlanInputs(){
+  var n = document.getElementById("planName");
+  if(n) planDraft.name = n.value;
+  var pn = document.getElementById("piName");
+  if(pn) piName = pn.value;
+  var ps = document.getElementById("piSetsIn");
+  if(ps) piSets = Math.max(1, Math.min(50, parseInt(ps.value,10)||1));
+}
+
 /* ---------------- events ---------------- */
 document.addEventListener("click", function(ev){
   var t = ev.target.closest("button");
@@ -717,6 +981,88 @@ document.addEventListener("click", function(ev){
   if(t.dataset.unit){ db.units=t.dataset.unit; save(); render(); return; }
   if(t.dataset.htype){ historyType=t.dataset.htype; render(); return; }
 
+  /* plans tab */
+  if(t.id==="manageLib"){ openLibPanel(); return; }
+  if(t.id==="newPlan"){ openPlanPanel(null); return; }
+  if(t.dataset.editplan){ openPlanPanel(t.dataset.editplan); return; }
+  if(t.dataset.startplan){
+    db.runningPlanId = t.dataset.startplan; save();
+    tab="log"; cursor=todayKey(); openExercise=null;
+    [].forEach.call(document.querySelectorAll("nav.tabs button"), function(b){
+      b.setAttribute("aria-selected", b.dataset.tab==="log" ? "true":"false"); });
+    render(); return;
+  }
+  if(t.dataset.endplan){ db.runningPlanId=null; save(); render(); return; }
+  if(t.dataset.planitem!==undefined){
+    var runPlan2 = db.runningPlanId ? planById(db.runningPlanId) : null;
+    if(runPlan2){
+      var pitem = runPlan2.items[+t.dataset.planitem];
+      var pexisting = dayEntries(cursor).filter(function(e){ return e.name.toLowerCase()===pitem.name.toLowerCase(); })[0];
+      openPanel(pexisting?pexisting.id:null, pexisting?null:{name:pitem.name, type:pitem.type});
+    }
+    return;
+  }
+
+  /* exercise library panel */
+  if(t.id==="cancelLib"){ closeLibPanel(); return; }
+  if(t.dataset.libtype){ libType=t.dataset.libtype; libEdit=null; paintLibPanel(); return; }
+  if(t.dataset.libren!==undefined){ libEdit=t.dataset.libren; paintLibPanel(); return; }
+  if(t.dataset.libdel!==undefined){ libDelete(libType, t.dataset.libdel); paintLibPanel(); return; }
+  if(t.id==="libSave"){
+    var libIn=document.getElementById("libEditIn");
+    libRename(libType, libEdit, libIn?libIn.value:"");
+    libEdit=null; paintLibPanel(); return;
+  }
+  if(t.id==="libCancelEdit"){ libEdit=null; paintLibPanel(); return; }
+  if(t.id==="libAdd"){
+    var libNewIn=document.getElementById("libNew");
+    libAdd(libType, libNewIn?libNewIn.value:"");
+    paintLibPanel(); return;
+  }
+
+  /* plan editor panel */
+  if(planDraft){
+    if(t.id==="cancelPlanP"){ closePlanPanel(); return; }
+    if(t.dataset.pitype){ readPlanInputs(); piType=t.dataset.pitype; paintPlanPanel(); return; }
+    if(t.dataset.pipick){ readPlanInputs(); piName=t.dataset.pipick; paintPlanPanel(); return; }
+    if(t.dataset.piadj){
+      readPlanInputs();
+      piSets = Math.max(1, Math.min(50, piSets+parseInt(t.dataset.piadj,10)));
+      paintPlanPanel(); return;
+    }
+    if(t.id==="addItem"){
+      readPlanInputs();
+      if(!piName.trim()) return;
+      planDraft.items.push({name:piName.trim(), type:piType, sets:piSets});
+      libAdd(piType, piName.trim());
+      piName=""; piSets=3;
+      paintPlanPanel(); return;
+    }
+    if(t.dataset.rmitem!==undefined){
+      readPlanInputs();
+      planDraft.items.splice(+t.dataset.rmitem,1);
+      paintPlanPanel(); return;
+    }
+    if(t.id==="delPlan"){
+      if(confirm("Delete this plan? This cannot be undone.")){
+        db.plans = db.plans.filter(function(p){ return p.id!==planDraft.id; });
+        if(db.runningPlanId===planDraft.id) db.runningPlanId=null;
+        save(); closePlanPanel();
+      }
+      return;
+    }
+    if(t.id==="savePlan"){
+      readPlanInputs();
+      if(!planDraft.name.trim() || !planDraft.items.length) return;
+      var plist = db.plans;
+      var pidx=-1;
+      plist.forEach(function(p,i){ if(p.id===planDraft.id) pidx=i; });
+      var prec = {id:planDraft.id, name:planDraft.name.trim(), items:planDraft.items};
+      if(pidx>=0) plist[pidx]=prec; else plist.push(prec);
+      save(); closePlanPanel(); return;
+    }
+  }
+
   if(t.id==="exportBtn"){
     var blob = new Blob([JSON.stringify(db,null,2)],{type:"application/json"});
     var a = document.createElement("a");
@@ -728,8 +1074,8 @@ document.addEventListener("click", function(ev){
   }
   if(t.id==="importBtn"){ document.getElementById("fileIn").click(); return; }
   if(t.id==="wipeBtn"){
-    if(confirm("Delete every logged session? This cannot be undone.")){
-      db={units:db.units,days:{}}; save(); render();
+    if(confirm("Delete every logged session, plan, and saved exercise? This cannot be undone.")){
+      db={units:db.units,days:{},exerciseLib:{},plans:[],runningPlanId:null}; save(); render();
     }
     return;
   }
@@ -811,13 +1157,22 @@ document.addEventListener("change", function(ev){
     prefillFromLast();
     paintPanel();
   }
+  if(ev.target.id==="planName" && planDraft){
+    // don't repaint the whole panel here: a pending tap on a suggestion chip
+    // elsewhere in it would land on a detached element once this blur-triggered
+    // change event replaces the panel's DOM out from under it. Just keep the
+    // Save button's enabled state in sync directly.
+    planDraft.name = ev.target.value;
+    var saveBtn = document.getElementById("savePlan");
+    if(saveBtn) saveBtn.disabled = !(planDraft.name.trim() && planDraft.items.length);
+  }
   if(ev.target.id==="fileIn" && ev.target.files[0]){
     var fr=new FileReader();
     fr.onload=function(){
       try{
         var d=JSON.parse(fr.result);
         if(!d || typeof d.days!=="object") throw 0;
-        db={units:d.units||"lb", days:d.days};
+        db={units:d.units||"lb", days:d.days, exerciseLib:d.exerciseLib||{}, plans:d.plans||[], runningPlanId:d.runningPlanId||null};
         save(); render();
       }catch(e){ alert("That file isn't a Reps backup. Pick the .json you exported."); }
     };
@@ -850,11 +1205,27 @@ document.addEventListener("keydown", function(ev){
     }
     if(ev.target.id==="exName"){ ev.preventDefault(); ev.target.blur(); }
   }
+  if(ev.key==="Enter" && planDraft){
+    if(ev.target.id==="piName"){ ev.preventDefault(); ev.target.blur(); document.getElementById("addItem").click(); }
+    if(ev.target.id==="planName"){ ev.preventDefault(); ev.target.blur(); }
+  }
+  if(ev.key==="Enter" && ev.target.id==="libNew"){ ev.preventDefault(); document.getElementById("libAdd").click(); }
+  if(ev.key==="Enter" && ev.target.id==="libEditIn"){ ev.preventDefault(); document.getElementById("libSave").click(); }
 });
 
 /* ---------------- boot ---------------- */
 store.get(KEY).then(function(raw){
-  if(raw){ try{ var d=JSON.parse(raw); if(d && d.days) db=d; }catch(e){} }
+  if(raw){
+    try{
+      var d=JSON.parse(raw);
+      if(d && d.days){
+        d.exerciseLib = d.exerciseLib || {};
+        d.plans = d.plans || [];
+        if(d.runningPlanId===undefined) d.runningPlanId=null;
+        db=d;
+      }
+    }catch(e){}
+  }
   render();
 });
 

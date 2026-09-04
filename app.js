@@ -613,7 +613,24 @@ document.addEventListener("keydown", function(ev){
 /* ---------------- boot ---------------- */
 if ("serviceWorker" in navigator && location.protocol !== "file:"){
   window.addEventListener("load", function(){
-    navigator.serviceWorker.register("./sw.js").catch(function(){});
+    navigator.serviceWorker.register("./sw.js").then(function(reg){
+      // iOS rarely checks for a new SW on its own, especially for
+      // home-screen apps, so force a check whenever the app is opened
+      // or brought back to the foreground.
+      document.addEventListener("visibilitychange", function(){
+        if (document.visibilityState === "visible") reg.update();
+      });
+    }).catch(function(){});
+
+    // Once a newly installed SW takes control (it self-activates via
+    // skipWaiting/clients.claim in sw.js), reload once to pick up the
+    // fresh files instead of leaving the old page running.
+    var reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function(){
+      if (reloaded) return;
+      reloaded = true;
+      location.reload();
+    });
   });
 }
 

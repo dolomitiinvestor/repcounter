@@ -347,12 +347,15 @@ function renderHistory(){
     shown.forEach(function(n){
       var ss = sessionsOf(n);
       var last = ss[ss.length-1];
-      var best = 0;
-      ss.forEach(function(s){ s.sets.forEach(function(x){ if(x.weight>best) best=x.weight; }); });
+      var best = 0, bestRm = 0;
+      ss.forEach(function(s){ s.sets.forEach(function(x){
+        if(x.weight>best) best=x.weight;
+        if(e1rm(x)>bestRm) bestRm=e1rm(x);
+      }); });
       html += '<button class="hrow" data-ex="'+esc(n)+'"><span class="nm">'+esc(n)+
               '<span class="tbadge" style="color:'+typeColor(last.type)+';margin-left:8px">'+esc(typeLabel(last.type))+'</span>'+
-              '<div class="sub">'+ss.length+' session'+(ss.length>1?"s":"")+' · last '+shortDate(last.date)+'</div></span>'+
-              '<span class="best">'+trim(best)+'</span></button>';
+              '<div class="sub">'+ss.length+' session'+(ss.length>1?"s":"")+' · last '+shortDate(last.date)+' · best '+trim(best)+' '+db.units+'</div></span>'+
+              '<span class="best">'+trim(bestRm)+'<small style="display:block;font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--steel);font-weight:500">1RM</small></span></button>';
     });
   }
   dayTitle.textContent = "History";
@@ -410,17 +413,26 @@ function spark(ss){
 function renderData(){
   dayTitle.textContent = "Data";
   var days = sortedDays();
-  var totalSets = 0;
-  days.forEach(function(k){ db.days[k].forEach(function(e){ totalSets += e.sets.length; }); });
+  var totalEntries = 0, totalSets = 0, totalReps = 0, totalVolume = 0;
+  days.forEach(function(k){
+    db.days[k].forEach(function(e){
+      totalEntries++;
+      totalSets += e.sets.length;
+      e.sets.forEach(function(s){ totalReps += s.reps; totalVolume += s.reps*s.weight; });
+    });
+  });
   var html = "";
   if(!persistent){
     html += '<div class="note"><b>Nothing is being saved.</b> This browser is blocking storage — private browsing does that. Export a backup before you close the tab, or reopen the app in a normal window.</div>';
   } else {
     html += '<div class="note">Everything stays on this phone. No account, no server, no sync. Export a backup before you switch phones or clear Safari data.</div>';
   }
-  html += '<div class="prcards"><div class="prcard"><div class="cap">Days</div><div class="v">'+days.length+'</div></div>'+
-          '<div class="prcard"><div class="cap">Sets</div><div class="v">'+totalSets+'</div></div>'+
-          '<div class="prcard"><div class="cap">Moves</div><div class="v">'+exerciseNames().length+'</div></div></div>';
+  html += '<div class="prcards"><div class="prcard"><div class="cap">Workouts</div><div class="v">'+days.length+'</div></div>'+
+          '<div class="prcard"><div class="cap">Exercises</div><div class="v">'+totalEntries+'</div></div>'+
+          '<div class="prcard"><div class="cap">Sets</div><div class="v">'+totalSets+'</div></div></div>';
+  html += '<div class="prcards"><div class="prcard"><div class="cap">Reps</div><div class="v">'+num(totalReps)+'</div></div>'+
+          '<div class="prcard"><div class="cap">Weight moved</div><div class="v">'+num(totalVolume)+'<small> '+db.units+'</small></div></div>'+
+          '<div class="prcard"><div class="cap">Unique moves</div><div class="v">'+exerciseNames().length+'</div></div></div>';
   html += '<label class="fl">Weight unit</label>'+
           '<div class="chips"><button class="chip" data-unit="lb"'+(db.units==="lb"?' style="border-color:var(--plate-blue);color:var(--bone)"':'')+'>lb</button>'+
           '<button class="chip" data-unit="kg"'+(db.units==="kg"?' style="border-color:var(--plate-blue);color:var(--bone)"':'')+'>kg</button></div>';
@@ -526,7 +538,8 @@ function openPanel(entryId, opts){
     var prev = lastSessionBefore(tplEx.name, cursor, null);
     draft = { id:uid(), name:tplEx.name, type:workoutSession?workoutSession.cat:"mix", sets:[],
       reps: prev ? prev.sets[prev.sets.length-1].reps : tplEx.reps,
-      weight: prev ? prev.sets[prev.sets.length-1].weight : tplEx.weight,
+      weight: tplEx.bodyweight ? ((prev && prev.bodyweight) ? prev.sets[prev.sets.length-1].weight : 0)
+              : (prev ? prev.sets[prev.sets.length-1].weight : tplEx.weight),
       bodyweight:!!tplEx.bodyweight, eachSide:!!tplEx.eachSide,
       workoutExId: opts.workoutExId, editing:false, editingSetIndex:null };
   } else {
@@ -702,7 +715,16 @@ document.addEventListener("click", function(ev){
   if(t.id==="cancelP"){ closePanel(); return; }
   if(t.dataset.type){ readInputs(); draft.type=t.dataset.type; paintPanel(); return; }
   if(t.dataset.pick){ readInputs(); draft.name=t.dataset.pick; prefillFromLast(); paintPanel(); focusName(false); return; }
-  if(t.dataset.toggle){ readInputs(); draft[t.dataset.toggle] = !draft[t.dataset.toggle]; paintPanel(); return; }
+  if(t.dataset.toggle){
+    readInputs();
+    var wasBodyweight = draft.bodyweight;
+    draft[t.dataset.toggle] = !draft[t.dataset.toggle];
+    if(t.dataset.toggle==="bodyweight" && draft.bodyweight && !wasBodyweight){
+      var bwPrev = draft.name ? lastSessionBefore(draft.name, cursor, draft.id) : null;
+      draft.weight = (bwPrev && bwPrev.bodyweight) ? bwPrev.sets[bwPrev.sets.length-1].weight : 0;
+    }
+    paintPanel(); return;
+  }
   if(t.dataset.adj){
     readInputs();
     var p=t.dataset.adj.split(":"), amt=parseFloat(p[1]);

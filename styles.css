@@ -234,6 +234,48 @@
   .note b{color:var(--plate-yellow)}
   .toolrow{display:flex;gap:9px;margin-top:12px}
   .toolrow button{flex:1}
+
+  /* ---------- workouts ---------- */
+  .togglechip.on{border-color:var(--plate-blue);color:var(--bone);background:rgba(45,125,210,.15)}
+  .ssbadge{
+    font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--plate-yellow);margin:2px 0 -2px 2px
+  }
+  .tpllist{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+  .tplrow{background:var(--floor-2);border-radius:12px;padding:12px}
+  .tplrow.ss{border-left:2px solid var(--plate-yellow)}
+  .tplrow-top{display:flex;align-items:center;gap:8px}
+  .tplrow-top .tplname{
+    flex:1;background:none;border:0;border-bottom:1px solid #2d323a;
+    padding:6px 2px;font-size:16px;color:var(--bone)
+  }
+  .tplrow-nums{display:flex;gap:10px;margin-top:10px}
+  .tplrow-nums label{
+    flex:1;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--steel)
+  }
+  .tplrow-nums input{
+    display:block;width:100%;margin-top:4px;background:var(--floor);border:1px solid #2d323a;
+    border-radius:8px;padding:8px;font-size:15px;color:var(--bone);font-family:var(--body)
+  }
+  .wshead{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .wstitle{font-family:var(--cond);font-size:22px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+  .wsrow{
+    display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+    background:var(--floor-2);border-radius:12px;padding:13px 14px
+  }
+  .wsrow.ss{border-left:2px solid var(--plate-yellow)}
+  .wsrow.done{opacity:.6}
+  .wsrow .mark{
+    width:26px;height:26px;border-radius:50%;background:#242830;color:var(--plate-blue);
+    font-family:var(--mono);font-size:12px;display:grid;place-items:center;flex:none
+  }
+  .wsrow.done .mark{background:var(--plate-blue);color:#fff}
+  .wsname{flex:1;font-family:var(--cond);font-size:18px;font-weight:600;letter-spacing:.02em;text-transform:uppercase}
+  .wssub{
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.03em;text-transform:none;
+    color:var(--steel);margin-top:3px
+  }
   @media(prefers-reduced-motion:no-preference){
     .panel{animation:up .22s cubic-bezier(.32,.72,0,1)}
     @keyframes up{from{transform:translateY(100%)}to{transform:translateY(0)}}

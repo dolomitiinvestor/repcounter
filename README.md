@@ -92,12 +92,23 @@ The shape is plain and easy to script against:
           { "reps": 8, "weight": 135 },
           { "reps": 8, "weight": 135 },
           { "reps": 6, "weight": 145 }
-        ]
+        ],
+        "bodyweight": false,
+        "eachSide": false
       }
     ]
+  },
+  "templates": {
+    "push": { "label": "Push", "exercises": [
+      { "id": "a1b2c3d", "name": "Bench press", "weight": 135, "sets": 5, "reps": 8, "bodyweight": false, "eachSide": false, "superset": null }
+    ] },
+    "pull": { "label": "Pull", "exercises": [] },
+    "legs": { "label": "Legs", "exercises": [] }
   }
 }
 ```
+
+`templates` holds the editable Push/Pull/Legs routines used by the Workouts tab. An entry logged from a workout carries a matching `workoutExId` back to the template exercise it came from.
 
 ---
 
@@ -105,8 +116,9 @@ The shape is plain and easy to script against:
 
 - **Log** — `‹ ›` steps between days. **Add exercise** → pick a workout type (Push, Pull, Legs, Mix/Other, Cardio) → type a name (it autocompletes from everything you've logged) — or tap one of the quick-add chips, which only show exercises you've previously logged under that type → set reps and weight with the ± buttons → **Log set**. Repeat for each set, then save. Tap the pencil on a logged set to edit it in place.
 - **Recall** — naming an exercise prefills the numbers from last time and shows that session below the field. Each set you log gets a delta against it: `+5 lb`, `+2 reps`, `same`.
+- **Workouts** — pick Push, Pull, or Legs and edit that routine: exercise name, target sets/reps/weight, and per-exercise **Bodyweight** or **1x each side** flags. Tap **Superset ↑** on a row to link it with the one above. **Start workout** opens a checklist of that routine's exercises for today — tap any of them, in any order, to log sets with the same set-logging screen as the Log tab (numbers default to what you last did for that exercise). Log fewer sets than the target any time you want to cut a movement short. **End workout** / **Finish workout** just closes the checklist — everything you logged is already saved to today's log.
 - **History** — every exercise you've ever done, with heaviest set, estimated 1RM, a top-set trend line, and each past session by date. Filter the list by workout type with the chips at the top.
-- **Data** — lb/kg, backups, and a full wipe.
+- **Data** — lb/kg, backups, and a full wipe (which also resets the three workout routines back to their defaults).
 
 Estimated 1RM uses Epley: `weight × (1 + reps ÷ 30)`.
 

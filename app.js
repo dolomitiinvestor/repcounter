@@ -483,7 +483,8 @@ function renderWorkoutEditor(){
   });
   html += '</div>';
   html += '<button class="add" id="tplAdd">+ Add exercise</button>';
-  html += '<button class="primary" id="startWorkout" style="margin-top:6px"'+(tpl.exercises.length?"":" disabled")+'>Start workout</button>';
+  html += '<div style="height:84px"></div>';
+  html += '<div class="ctabar"><button class="primary" id="startWorkout"'+(tpl.exercises.length?"":" disabled")+'>Start workout</button></div>';
   view.innerHTML = html;
 }
 

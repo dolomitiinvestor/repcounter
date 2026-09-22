@@ -125,6 +125,14 @@
   .empty .big{font-family:var(--cond);font-size:22px;letter-spacing:.05em;text-transform:uppercase;color:#4a505a}
   .empty p{font-size:13.5px;margin:8px 0 0;line-height:1.5}
 
+  /* ---------- sticky CTA above tabs ---------- */
+  .ctabar{
+    position:fixed;left:0;right:0;bottom:calc(76px + env(safe-area-inset-bottom));z-index:25;
+    padding:14px var(--pad) 10px;
+    background:linear-gradient(rgba(20,22,26,0),var(--floor) 45%);
+  }
+  .ctabar .primary{margin:0}
+
   /* ---------- bottom tabs ---------- */
   nav.tabs{
     position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;

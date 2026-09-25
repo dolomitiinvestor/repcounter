@@ -17,15 +17,18 @@
     --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;padding:0}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden}
   body{
+    /* fixed-height app shell: only <main> scrolls, so the page never changes
+       height and the bottom tabs never move when switching tabs */
+    height:100vh;height:100dvh;
+    display:flex;flex-direction:column;
     background:var(--floor);
     color:var(--bone);
     font-family:var(--body);
     font-size:16px;
     -webkit-text-size-adjust:100%;
-    overscroll-behavior-y:none;
-    padding-bottom:calc(76px + env(safe-area-inset-bottom));
+    overscroll-behavior:none;
   }
   button,input,select{font:inherit;color:inherit}
   button{background:none;border:0;cursor:pointer}
@@ -33,7 +36,7 @@
 
   /* ---------- top chrome ---------- */
   header{
-    position:sticky;top:0;z-index:20;
+    position:relative;flex:none;z-index:20;
     background:linear-gradient(var(--floor) 78%,rgba(20,22,26,0));
     padding:calc(env(safe-area-inset-top) + 14px) var(--pad) 12px;
   }
@@ -54,7 +57,10 @@
   .daystat b{color:var(--bone);font-weight:600}
 
   /* ---------- log sheet ---------- */
-  main{padding:0 var(--pad)}
+  main{
+    flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+    padding:0 var(--pad) calc(76px + env(safe-area-inset-bottom))
+  }
   .sheet{
     background:var(--paper);color:var(--ink);border-radius:var(--radius);
     margin-bottom:12px;overflow:hidden;

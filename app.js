@@ -655,7 +655,7 @@ document.addEventListener("click", function(ev){
     tab=t.dataset.tab; openExercise=null;
     [].forEach.call(document.querySelectorAll("nav.tabs button"), function(b){
       b.setAttribute("aria-selected", b===t ? "true":"false"); });
-    render(); return;
+    render(); document.getElementById("view").scrollTop=0; return;
   }
 
   if(t.id==="addBtn"){ openPanel(null); return; }
